@@ -123,10 +123,9 @@
                     if (chan) this.joinChannel(chan);
                 },
                 sendChannelMsg: function (msg) {
-                    if (!this.currentChannel.chan) return alert('请加入一个聊天群');
                     var _self = this;
                     var data = { type: 'chanmsg', sender: _self.id, senderNick: _self.nick, chan: _self.currentChannel.chan, time: new Date().getTime(), msg: msg, };
-                    ajax('/ws/send-channelmsg', { websocketId: _self.id, channel: _self.currentChannel.chan, message: JSON.stringify(data) }, function (rt) {
+                    ajax('/ws/send-msg', { senderWebsocketId: _self.id, receiveWebsocketId: _self.id, message: JSON.stringify(data) }, function (rt) {
 
                     });
                 },

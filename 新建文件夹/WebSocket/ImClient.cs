@@ -1,10 +1,15 @@
-﻿using FreeRedis;
+﻿#if ns20
+using FreeRedis;
+using imCore;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using RabbitMQ.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 /// <summary>
 /// im 核心类实现的配置所需
@@ -30,11 +35,11 @@ public class ImSendEventArgs : EventArgs
     /// <summary>
     /// 发送者的客户端id
     /// </summary>
-    public Guid SenderClientId { get; }
+    public string SenderClientId { get; }
     /// <summary>
     /// 接收者的客户端id
     /// </summary>
-    public List<Guid> ReceiveClientId { get; } = new List<Guid>();
+    public List<string> ReceiveClientId { get; } = new List<string>();
     /// <summary>
     /// imServer 服务器节点
     /// </summary>
@@ -48,7 +53,7 @@ public class ImSendEventArgs : EventArgs
     /// </summary>
     public bool Receipt { get; }
 
-    internal ImSendEventArgs(string server, Guid senderClientId, object message, bool receipt = false)
+    internal ImSendEventArgs(string server, string senderClientId, object message, bool receipt = false)
     {
         this.Server = server;
         this.SenderClientId = senderClientId;
@@ -91,9 +96,9 @@ public class ImClient
     /// </summary>
     /// <param name="clientId">客户端id</param>
     /// <returns></returns>
-    protected string SelectServer(Guid clientId)
+    protected string SelectServer(string clientId)
     {
-        var servers_idx = int.Parse(clientId.ToString("N").Substring(28), NumberStyles.HexNumber) % _servers.Length;
+        var servers_idx = int.Parse(clientId.Substring(28), NumberStyles.HexNumber) % _servers.Length;
         if (servers_idx >= _servers.Length) servers_idx = 0;
         return _servers[servers_idx];
     }
@@ -104,11 +109,11 @@ public class ImClient
     /// <param name="clientId">客户端id</param>
     /// <param name="clientMetaData">客户端相关信息，比如ip</param>
     /// <returns>websocket 地址：ws://xxxx/ws?token=xxx</returns>
-    public string PrevConnectServer(Guid clientId, string clientMetaData)
+    public string PrevConnectServer(string clientId, string clientMetaData)
     {
         var server = SelectServer(clientId);
         var token = $"{Guid.NewGuid()}{Guid.NewGuid()}{Guid.NewGuid()}{Guid.NewGuid()}".Replace("-", "");
-        _redis.Set($"{_redisPrefix}Token{token}", JsonConvert.SerializeObject((clientId, clientMetaData)), 10);
+        _redis.Set($"{_redisPrefix}Token{token}", JsonConvert.SerializeObject((clientId, clientMetaData)), 1000);
         return $"ws://{server}{_pathMatch}?token={token}";
     }
 
@@ -119,7 +124,34 @@ public class ImClient
     /// <param name="receiveClientId">接收者的客户端id</param>
     /// <param name="message">消息</param>
     /// <param name="receipt">是否回执</param>
-    public void SendMessage(Guid senderClientId, IEnumerable<Guid> receiveClientId, object message, bool receipt = false)
+    //public void SendMessage(string senderClientId, IEnumerable<string> receiveClientId, object message, bool receipt = false)
+    //{
+    //    receiveClientId = receiveClientId.Distinct().ToArray();
+    //    Dictionary<string, ImSendEventArgs> redata = new Dictionary<string, ImSendEventArgs>();
+
+    //    foreach (var uid in receiveClientId)
+    //    {
+    //        string server = SelectServer(uid);
+    //        if (redata.ContainsKey(server) == false) redata.Add(server, new ImSendEventArgs(server, senderClientId, message, receipt));
+    //        redata[server].ReceiveClientId.Add(uid);
+    //    }
+    //    var messageJson = JsonConvert.SerializeObject(message);
+    //    foreach (var sendArgs in redata.Values)
+    //    {
+    //        OnSend?.Invoke(this, sendArgs);
+    //        _redis.Publish($"{_redisPrefix}Server{sendArgs.Server}",
+    //            JsonConvert.SerializeObject((senderClientId, sendArgs.ReceiveClientId, messageJson, sendArgs.Receipt)));
+    //    }
+    //}
+
+    /// <summary>
+    /// 向指定的多个客户端id发送消息
+    /// </summary>
+    /// <param name="senderClientId">发送者的客户端id</param>
+    /// <param name="receiveClientId">接收者的客户端id</param>
+    /// <param name="message">消息</param>
+    /// <param name="receipt">是否回执</param>
+    public void SendMessage(string senderClientId, IEnumerable<string> receiveClientId, string queenName,object message, bool receipt = false)
     {
         receiveClientId = receiveClientId.Distinct().ToArray();
         Dictionary<string, ImSendEventArgs> redata = new Dictionary<string, ImSendEventArgs>();
@@ -133,9 +165,21 @@ public class ImClient
         var messageJson = JsonConvert.SerializeObject(message);
         foreach (var sendArgs in redata.Values)
         {
-            OnSend?.Invoke(this, sendArgs);
-            _redis.Publish($"{_redisPrefix}Server{sendArgs.Server}",
-                JsonConvert.SerializeObject((senderClientId, sendArgs.ReceiveClientId, messageJson, sendArgs.Receipt)));
+            try
+            {
+                OnSend?.Invoke(this, sendArgs);
+                
+                //交换机名称
+                string exchangeName = $"{_redisPrefix}Server{sendArgs.Server}";
+                var msg = JsonConvert.SerializeObject((senderClientId, sendArgs.ReceiveClientId, messageJson, sendArgs.Receipt));
+                IRabbitMQHelper rabbmqHelper = ServiceLocator.Instance.GetService<IRabbitMQHelper>();
+                var connection = rabbmqHelper.CreateMQConnection();
+                rabbmqHelper.SendMsg(connection, exchangeName, ExchangeType.Direct, queenName, msg, true);
+            }
+            catch
+            {
+                continue;
+            }
         }
     }
 
@@ -143,9 +187,9 @@ public class ImClient
     /// 获取所在线客户端id
     /// </summary>
     /// <returns></returns>
-    public IEnumerable<Guid> GetClientListByOnline()
+    public IEnumerable<string> GetClientListByOnline()
     {
-        return _redis.HKeys($"{_redisPrefix}Online").Select(a => Guid.TryParse(a, out var tryguid) ? tryguid : Guid.Empty).Where(a => a != Guid.Empty);
+        return _redis.HKeys($"{_redisPrefix}Online").Where(a => !string.IsNullOrEmpty(a));
     }
 
     /// <summary>
@@ -153,9 +197,9 @@ public class ImClient
     /// </summary>
     /// <param name="clientId"></param>
     /// <returns></returns>
-    public bool HasOnline(Guid clientId)
+    public bool HasOnline(string clientId)
     {
-        return _redis.HGet<int>($"{_redisPrefix}Online", clientId.ToString()) > 0;
+        return _redis.HGet<int>($"{_redisPrefix}Online", clientId) > 0;
     }
 
     /// <summary>
@@ -164,16 +208,16 @@ public class ImClient
     /// <param name="online">上线</param>
     /// <param name="offline">下线</param>
     public void EventBus(
-        Action<(Guid clientId, string clientMetaData)> online,
-        Action<(Guid clientId, string clientMetaData)> offline)
+        Action<(string clientId, string clientMetaData)> online,
+        Action<(string clientId, string clientMetaData)> offline)
     {
-        var chanOnline = $"evt_{_redisPrefix}Online";
-        var chanOffline = $"evt_{_redisPrefix}Offline";
-        _redis.Subscribe(new[] { chanOnline, chanOffline }, (chan, msg) =>
-        {
-            if (chan == chanOnline) online(JsonConvert.DeserializeObject<(Guid clientId, string clientMetaData)>(msg as string));
-            if (chan == chanOffline) offline(JsonConvert.DeserializeObject<(Guid clientId, string clientMetaData)>(msg as string));
-        });
+        //var chanOnline = $"evt_{_redisPrefix}Online";
+        //var chanOffline = $"evt_{_redisPrefix}Offline";
+        //_redis.Subscribe(new[] { chanOnline, chanOffline }, (chan, msg) =>
+        //{
+        //    if (chan == chanOnline) online(JsonConvert.DeserializeObject<(string clientId, string clientMetaData)>(msg as string));
+        //    if (chan == chanOffline) offline(JsonConvert.DeserializeObject<(string clientId, string clientMetaData)>(msg as string));
+        //});
     }
 
     #region 群聊频道，每次上线都必须重新加入
@@ -183,7 +227,7 @@ public class ImClient
     /// </summary>
     /// <param name="clientId">客户端id</param>
     /// <param name="chan">群聊频道名</param>
-    public void JoinChan(Guid clientId, string chan)
+    public void JoinChan(string clientId, string chan)
     {
         using (var pipe = _redis.StartPipe())
         {
@@ -198,7 +242,7 @@ public class ImClient
     /// </summary>
     /// <param name="clientId">客户端id</param>
     /// <param name="chans">群聊频道名</param>
-    public void LeaveChan(Guid clientId, params string[] chans)
+    public void LeaveChan(string clientId, params string[] chans)
     {
         if (chans?.Any() != true) return;
         using (var pipe = _redis.StartPipe())
@@ -217,9 +261,9 @@ public class ImClient
     /// </summary>
     /// <param name="chan">群聊频道名</param>
     /// <returns></returns>
-    public Guid[] GetChanClientList(string chan)
+    public string[] GetChanClientList(string chan)
     {
-        return _redis.HKeys($"{_redisPrefix}Chan{chan}").Select(a => Guid.Parse(a)).ToArray();
+        return _redis.HKeys($"{_redisPrefix}Chan{chan}").Select(a => a).ToArray();
     }
     /// <summary>
     /// 清理群聊频道的离线客户端（测试）
@@ -269,7 +313,7 @@ public class ImClient
     /// </summary>
     /// <param name="clientId">客户端id</param>
     /// <returns></returns>
-    public string[] GetChanListByClientId(Guid clientId)
+    public string[] GetChanListByClientId(string clientId)
     {
         return _redis.HKeys($"{_redisPrefix}Client{clientId}");
     }
@@ -289,11 +333,13 @@ public class ImClient
     /// <param name="senderClientId">发送者的客户端id</param>
     /// <param name="chan">群聊频道名</param>
     /// <param name="message">消息</param>
-	public void SendChanMessage(Guid senderClientId, string chan, object message)
+	public void SendChanMessage(string senderClientId, string chan, object message)
     {
         var websocketIds = _redis.HKeys($"{_redisPrefix}Chan{chan}");
-        SendMessage(Guid.Empty, websocketIds.Where(a => !string.IsNullOrEmpty(a)).Select(a => Guid.TryParse(a, out var tryuuid) ? tryuuid : Guid.Empty).ToArray(), message);
+        SendMessage(string.Empty, websocketIds.Where(a => !string.IsNullOrEmpty(a)).ToArray(),"test.channel.message", message);
     }
 
     #endregion
 }
+
+#endif

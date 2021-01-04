@@ -41,8 +41,8 @@ namespace web
 
             ImHelper.Initialization(new ImClientOptions
             {
-                Redis = new FreeRedis.RedisClient("127.0.0.1:6379,poolsize=10"),
-                Servers = new[] { "127.0.0.1:6001" }
+                Redis = new FreeRedis.RedisClient("127.0.0.1:6379,password=cTelHhQMFrw4R699rts00du8JW0CKF,defaultDatabase=0,poolsize=500,ssl=false,writeBuffer=10240"),
+                Servers = new[] { "127.0.0.1:5000" }
             });
 
             ImHelper.Instance.OnSend += (s, e) => 
@@ -52,8 +52,8 @@ namespace web
                 t =>
                 {
                     Console.WriteLine(t.clientId + "上线了");
-                    var onlineUids = ImHelper.GetClientListByOnline();
-                    ImHelper.SendMessage(t.clientId, onlineUids, $"用户{t.clientId}上线了");
+                    //var onlineUids = ImHelper.GetClientListByOnline();
+                    //ImHelper.SendMessage(t.clientId, onlineUids, $"用户{t.clientId}上线了");
                 }, 
                 t => Console.WriteLine(t.clientId + "下线了"));
         }
