@@ -32,22 +32,17 @@ namespace imServer
             services.Configure<MQSetting>(Configuration.GetSection("MqSetting"));
             services.Configure<DatabaseOption>(Configuration.GetSection("DatabaseOption"));
             services.Configure<List<ConsumerSetting>>(Configuration.GetSection("MqConsumerSetting"));
-            services.AddLogging((builder) => builder
-                .AddConfiguration(Configuration.GetSection("Logging"))
-                .AddConsole());
+            //services.AddLogging((builder) => builder
+            //    .AddConfiguration(Configuration.GetSection("Logging"))
+            //    .AddConsole());
             //services.InitSqlSugar();
             // 注入
             services.AddSingleton<IRabbitMQConsumerApplication, RabbitMQConsumerApplication>();
             services.AddSingleton<IRabbitMQHelper, RabbitMQHelper>();
             services.AddSingleton<IRedisServices, RedisServices>();
-            // 构建容器
-            IServiceProvider serviceProvider = services.BuildServiceProvider();
+            // 注入rabbitmq监听
+            services.AddSingleton<IRabbitMQConsumerApplication, RabbitMQConsumerApplication>();
 
-            // 启动MQ消费
-            Task.Run(() =>
-            {
-                serviceProvider.GetService<IRabbitMQConsumerApplication>().Start();
-            });
         }
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
@@ -57,7 +52,7 @@ namespace imServer
             Console.InputEncoding = Encoding.GetEncoding("GB2312");
 
             app.UseDeveloperExceptionPage();
-
+            app.UseSerilogRequestLogging();
             //ImHelper.Initialization(new ImClientOptions() { 
             //   Redis = new FreeRedis.RedisClient(Configuration["ImServerOption:RedisClient"]),
             //   Servers = Configuration["ImServerOption:Servers"].Split(";")
@@ -71,6 +66,12 @@ namespace imServer
             });
 
             ServiceLocator.Instance = app.ApplicationServices;
+
+            // 启动MQ消费
+            Task.Run(() =>
+            {
+                app.ApplicationServices.GetService<IRabbitMQConsumerApplication>().Start();
+            });
         }
     }
 }

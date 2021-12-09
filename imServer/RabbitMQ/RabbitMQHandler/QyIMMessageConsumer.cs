@@ -1,16 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using imModel;
-using SqlSugar.IOC;
 using imCommon;
 using Microsoft.Extensions.Configuration;
+using Serilog;
 
 namespace imServer
 {
@@ -19,15 +12,13 @@ namespace imServer
         /// <summary>
         /// Logger
         /// </summary>
-        ILogger _logger;
         IConfiguration _configuration;
         IRedisServices _redis;
 
-        public QyIMMessageConsumer(ILoggerFactory loggerFactory, IConfiguration configuration, IRedisServices redis)
+        public QyIMMessageConsumer(IConfiguration configuration, IRedisServices redis)
         {
             _redis = redis;
             _configuration = configuration;
-            _logger = loggerFactory.CreateLogger(nameof(QyIMMessageConsumer));
         }
 
         /// <summary>
@@ -44,22 +35,22 @@ namespace imServer
                 if (!ProduceMessage(msgCode, ref res))
                     throw new Exception(res);
 
-                _logger.LogInformation(res);
+                Log.Information(res);
             }
             catch (Exception ex)
             {
                 isSuccess = false;
-                _logger.LogError(res, "发送失败", ex.Message);
+                Log.Error(res, "发送失败", ex.Message);
             }
             return isSuccess;
         }
 
-        private bool ProduceMessage(string msgCode,ref string errMsg)
+        private bool ProduceMessage(string msgCode, ref string errMsg)
         {
             var isSuccess = true;
             try
             {
-                var url = _configuration.GetValue<String>("ApiServicesUrl")+msgCode;
+                var url = _configuration.GetValue<String>("ApiServicesUrl") + msgCode;
                 var response = HttpMethods.HttpPost(url);
                 var resObj = JsonConvert.DeserializeObject<WebApiResponse>(response);
                 if (resObj.code != 0)
@@ -70,6 +61,7 @@ namespace imServer
             catch (Exception ex)
             {
                 errMsg = ex.Message;
+                Log.Error($"QyIMMessageConsumer-ProduceMessage-{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.FFF")}:{ex.Message}");
                 isSuccess = false;
             }
             return isSuccess;
@@ -77,7 +69,7 @@ namespace imServer
     }
 
     internal class WebApiResponse
-    { 
+    {
         public int code { get; set; }
 
         public bool data { get; set; }

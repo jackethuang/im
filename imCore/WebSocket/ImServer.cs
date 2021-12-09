@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -35,14 +36,13 @@ public static class ImServerExtenssions
                     var webSocketOptions = new WebSocketOptions()
                     {
                         KeepAliveInterval = TimeSpan.FromSeconds(10),  //向客户端发送“ping”帧的频率，以确保代理保持连接处于打开状态
-                        ReceiveBufferSize = 4 * 1024   //用于接收数据的缓冲区的大小。 只有高级用户才需要对其进行更改，以便根据数据大小调整性能。
                     };
                     isUseWebSockets = true;
-                    appcur.UseWebSockets(); // appcur.UseWebSockets(webSocketOptions);
+                    appcur.UseWebSockets(webSocketOptions); // appcur.UseWebSockets(webSocketOptions);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"UseWebSockets：{ex.Message}");
+                    Log.Error($"初始化WebSocker错误：{ex.Message}");
                 }
             }
             appcur.Use((ctx, next) =>
@@ -93,6 +93,7 @@ public class ImServer : ImClient
         public string type { get; set; }
 
         public int currentSence { get; set; }
+
         public string clientId { get; set; }
 
         public string connectionBatchCode { get; set; }
@@ -108,33 +109,28 @@ public class ImServer : ImClient
     internal async Task Acceptor(HttpContext context, Func<Task> next)
     {
         if (!context.WebSockets.IsWebSocketRequest) return;
-        //try
-        //{
-        //}
-        //catch (Exception ex)
-        //{
-        //    Console.WriteLine($"Acceptor异常:{ex.Message}");
-        //}
+
         string token = context.Request.Query["token"];
         if (string.IsNullOrEmpty(token)) return;
 
         var cacheKey = $"{_redisPrefix}Token{token}";
         var token_value = _redis.Get(cacheKey);
+
         if (string.IsNullOrEmpty(token_value))
             throw new Exception("授权错误：用户需通过 ImHelper.PrevConnectServer 获得包含 token 的连接");
 
-        var data = JsonConvert.DeserializeObject<(string clientId, string clientMetaData)>(token_value);
+        var (clientId, clientMetaData) = JsonConvert.DeserializeObject<(string clientId, string clientMetaData)>(token_value);
 
         CancellationToken ct = context.RequestAborted;
         var socket = await context.WebSockets.AcceptWebSocketAsync();
-        var cli = new ImServerClient(socket, data.clientId);
+        var cli = new ImServerClient(socket, clientId);
         var newid = Guid.NewGuid().ToString();
 
-        var wslist = _clients.GetOrAdd(data.clientId, cliid => new ConcurrentDictionary<string, ImServerClient>());
+        var wslist = _clients.GetOrAdd(clientId, cliid => new ConcurrentDictionary<string, ImServerClient>());
         wslist.TryAdd(newid, cli);
         using (var pipe = _redis.StartPipe())
         {
-            pipe.HIncrBy($"{_redisPrefix}Online", data.clientId.ToString(), 1);
+            pipe.HIncrBy($"{_redisPrefix}Online", clientId.ToString(), 1);
             pipe.Publish($"evt_{_redisPrefix}Online", token_value);
             pipe.EndPipe();
         }
@@ -144,7 +140,7 @@ public class ImServer : ImClient
         try
         {
 
-            while (socket.State == WebSocketState.Open && _clients.ContainsKey(data.clientId))
+            while (socket.State == WebSocketState.Open && _clients.ContainsKey(clientId))
             {
                 var res = string.Empty;
                 var incoming = await socket.ReceiveAsync(seg, CancellationToken.None);
@@ -172,12 +168,12 @@ public class ImServer : ImClient
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Socket异常:{ex.Message}");
+            Log.Error($"Socket异常:{ex.Message}");
         }
         wslist.TryRemove(newid, out var oldcli);
-        if (wslist.Any() == false) _clients.TryRemove(data.clientId, out var oldwslist);
-        _redis.Eval($"if redis.call('HINCRBY', KEYS[1], '{data.clientId}', '-1') <= 0 then redis.call('HDEL', KEYS[1], '{data.clientId}') end return 1", new[] { $"{_redisPrefix}Online" });
-        LeaveChan(data.clientId, GetChanListByClientId(data.clientId));
+        if (wslist.Any() == false) _clients.TryRemove(clientId, out var oldwslist);
+        _redis.Eval($"if redis.call('HINCRBY', KEYS[1], '{clientId}', '-1') <= 0 then redis.call('HDEL', KEYS[1], '{clientId}') end return 1", new[] { $"{_redisPrefix}Online" });
+        LeaveChan(clientId, GetChanListByClientId(clientId));
 
     }
 
@@ -252,7 +248,8 @@ public class ImServer : ImClient
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"ProcessResponse异常:{ex.Message}");
+            //Console.WriteLine($"ProcessResponse异常:{ex.Message}");
+            Log.Information($"ProcessResponse异常:{ex.Message}");
         }
     }
 }

@@ -1,0 +1,40 @@
+2021-12-09 16:06:36.212 +08:00 [INF] Now listening on: http://[::]:5000
+2021-12-09 16:06:36.290 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2021-12-09 16:06:36.294 +08:00 [INF] Hosting environment: Production
+2021-12-09 16:06:36.296 +08:00 [INF] Content root path: D:\GitHub\IM\imServer
+2021-12-09 16:10:45.292 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.QYWX.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:10:45.292 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.Message.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:10:45.499 +08:00 [INF] Now listening on: http://[::]:5000
+2021-12-09 16:10:45.508 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2021-12-09 16:10:45.509 +08:00 [INF] Hosting environment: Production
+2021-12-09 16:10:45.510 +08:00 [INF] Content root path: D:\GitHub\IM\imServer
+2021-12-09 16:16:20.446 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.Message.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:16:20.446 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.QYWX.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:16:20.634 +08:00 [INF] Now listening on: http://[::]:5000
+2021-12-09 16:16:20.642 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2021-12-09 16:16:20.643 +08:00 [INF] Hosting environment: Production
+2021-12-09 16:16:20.645 +08:00 [INF] Content root path: D:\GitHub\IM\imServer
+2021-12-09 16:16:28.728 +08:00 [INF] Application is shutting down...
+2021-12-09 16:18:45.502 +08:00 [INF] Now listening on: http://[::]:5000
+2021-12-09 16:18:45.538 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2021-12-09 16:18:45.543 +08:00 [INF] Hosting environment: Production
+2021-12-09 16:18:45.545 +08:00 [INF] Content root path: D:\GitHub\IM\imServer
+2021-12-09 16:18:45.551 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.Message.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:18:45.551 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.QYWX.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:18:54.773 +08:00 [INF] Application is shutting down...
+2021-12-09 16:20:01.282 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.QYWX.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:20:01.282 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.Message.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:20:42.313 +08:00 [INF] Now listening on: http://[::]:5000
+2021-12-09 16:20:42.355 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2021-12-09 16:20:42.358 +08:00 [INF] Hosting environment: Production
+2021-12-09 16:20:42.360 +08:00 [INF] Content root path: D:\GitHub\IM\imServer
+2021-12-09 16:20:42.363 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.Message.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:20:42.363 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.QYWX.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:20:53.953 +08:00 [INF] Application is shutting down...
+2021-12-09 16:22:14.562 +08:00 [INF] Now listening on: http://[::]:5000
+2021-12-09 16:22:14.597 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2021-12-09 16:22:14.601 +08:00 [INF] Hosting environment: Production
+2021-12-09 16:22:14.603 +08:00 [INF] Content root path: D:\GitHub\IM\imServer
+2021-12-09 16:22:14.615 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.Message.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:22:14.615 +08:00 [INF] 消费端启动失败,失败原因：The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text='NOT_FOUND - no exchange 'CheckMall.QYWX.IMExchange' in vhost '/'', classId=50, methodId=20
+2021-12-09 16:22:17.335 +08:00 [INF] Application is shutting down...

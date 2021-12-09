@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,15 +17,13 @@ namespace imServer
         /// <summary>
         /// Logger
         /// </summary>
-        ILogger _logger;
         IConfiguration _configuration;
         IRedisServices _redis;
 
-        public IMMessageConsumer(ILoggerFactory loggerFactory, IConfiguration configuration, IRedisServices redis)
+        public IMMessageConsumer(IConfiguration configuration, IRedisServices redis)
         {
             _redis = redis;
             _configuration = configuration;
-            _logger = loggerFactory.CreateLogger(nameof(IMMessageConsumer));
         }
 
         /// <summary>
@@ -67,13 +66,13 @@ namespace imServer
                             content,
                             receipt = "发送成功"
                         });
-                    _logger.LogInformation(message);
+                    Log.Information(message);
                 }
             }
             catch (Exception ex)
             {
                 isSuccess = false;
-                _logger.LogError(message, "发送失败", ex.Message);
+                Log.Error(message, "发送失败", ex.Message);
             }
             return isSuccess;
         }

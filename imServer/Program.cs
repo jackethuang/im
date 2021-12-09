@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
 using System;
+using System.IO;
 
 namespace imServer
 {
@@ -20,6 +21,7 @@ namespace imServer
 #endif
         .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
         .Enrich.FromLogContext()
+        .WriteTo.Console()
         .WriteTo.File($"Logs/{DateTime.Now:yyyy/MMdd}/logs.txt")
         .CreateLogger();
 
@@ -46,10 +48,24 @@ namespace imServer
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+                    webBuilder.ConfigureKestrel(serverOptions =>
+                    {
+                        serverOptions.Limits.MaxRequestBodySize = 10485760;
+                        // Set properties and call methods on options
+                    });
                     webBuilder
-                    .UseStartup<Startup>()
-                    .UseKestrel()
+                    .UseKestrel(option =>
+                    {
+                        option.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(20);
+                        option.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(20);
+                    });
+                    webBuilder.UseStartup<Startup>()
                     .UseUrls("http://*:5000");
+                })
+                .UseSerilogDefault(config =>
+                {
+                    config.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+                          .WriteTo.File(Path.Combine(@"Log", "log.txt"), rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true);
                 });
 
 

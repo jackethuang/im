@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,9 +9,68 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace imServer
 {
+    //
+    // 摘要:
+    //     Serilog 日志拓展
+    public static class SerilogHostingExtensions
+    {
+        //
+        // 摘要:
+        //     添加默认日志拓展
+        //
+        // 参数:
+        //   hostBuilder:
+        //
+        //   configAction:
+        //
+        // 返回结果:
+        //     IWebHostBuilder
+        public static IWebHostBuilder UseSerilogDefault(this IWebHostBuilder hostBuilder, Action<LoggerConfiguration> configAction = null)
+        {
+            hostBuilder.UseSerilog(delegate (WebHostBuilderContext context, LoggerConfiguration configuration)
+            {
+                LoggerConfiguration loggerConfiguration = configuration.ReadFrom.Configuration(context.Configuration).Enrich.FromLogContext();
+                if (configAction != null)
+                {
+                    configAction(loggerConfiguration);
+                }
+                else if (context.Configuration["Serilog:WriteTo:0:Name"] == null)
+                {
+                    loggerConfiguration.WriteTo.Console(LogEventLevel.Verbose, "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}").WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "application.log"), LogEventLevel.Information, "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null, retainedFileCountLimit: null, encoding: Encoding.UTF8, fileSizeLimitBytes: 1073741824L, levelSwitch: null, buffered: false, shared: false, flushToDiskInterval: null, rollingInterval: RollingInterval.Day);
+                }
+            });
+            return hostBuilder;
+        }
+
+        //
+        // 摘要:
+        //     添加默认日志拓展
+        //
+        // 参数:
+        //   builder:
+        //
+        //   configAction:
+        public static IHostBuilder UseSerilogDefault(this IHostBuilder builder, Action<LoggerConfiguration> configAction = null)
+        {
+            builder.UseSerilog(delegate (HostBuilderContext context, LoggerConfiguration configuration)
+            {
+                LoggerConfiguration loggerConfiguration = configuration.ReadFrom.Configuration(context.Configuration).Enrich.FromLogContext();
+                if (configAction != null)
+                {
+                    configAction(loggerConfiguration);
+                }
+                else if (context.Configuration["Serilog:WriteTo:0:Name"] == null)
+                {
+                    loggerConfiguration.WriteTo.Console(LogEventLevel.Verbose, "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}").WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "application.log"), LogEventLevel.Information, "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null, retainedFileCountLimit: null, encoding: Encoding.UTF8, fileSizeLimitBytes: 1073741824L, levelSwitch: null, buffered: false, shared: false, flushToDiskInterval: null, rollingInterval: RollingInterval.Day);
+                }
+            });
+            return builder;
+        }
+    }
     public static class IHostExtention
     {
         /// <summary>
